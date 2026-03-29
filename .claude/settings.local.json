@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(npx vite:*)",
+      "Bash(ls -la \"C:/Users/xtian/Downloads/account-&-roi-tracker/node_modules/.bin/\")",
+      "Bash(ls:*)",
+      "Bash(node node_modules/vite/bin/vite.js build)",
+      "Bash(npx vercel:*)",
+      "Bash(gh auth:*)"
+    ]
+  }
+}

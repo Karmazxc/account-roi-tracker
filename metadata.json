@@ -1,0 +1,5 @@
+{
+  "name": "Account & ROI Tracker",
+  "description": "A system to manage restricted accounts with countdown timers, track daily earnings, and monitor script purchase ROI.",
+  "requestFramePermissions": []
+}

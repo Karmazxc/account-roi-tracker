@@ -1,0 +1,64 @@
+{
+  "entities": {
+    "Account": {
+      "title": "Account",
+      "description": "Represents a user's account for tracking balances and restrictions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the account." },
+        "name": { "type": "string", "description": "Name of the account." },
+        "email": { "type": "string", "format": "email", "description": "Email associated with the account." },
+        "phoneNumber": { "type": "string", "description": "Phone number associated with the account." },
+        "status": { "type": "string", "enum": ["Available", "Restricted"], "description": "Current status of the account." },
+        "restrictionEndTime": { "type": "number", "description": "Timestamp when the restriction ends." },
+        "balance": { "type": "number", "description": "Current balance of the account." },
+        "ownerId": { "type": "string", "description": "The UID of the user who owns this account." }
+      },
+      "required": ["id", "name", "status", "balance", "ownerId"]
+    },
+    "Earning": {
+      "title": "Earning",
+      "description": "Represents an individual earning entry.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the earning." },
+        "amount": { "type": "number", "description": "The amount earned." },
+        "date": { "type": "string", "format": "date-time", "description": "The date and time of the earning." },
+        "accountId": { "type": "string", "description": "The ID of the account this earning belongs to." },
+        "scriptId": { "type": "string", "description": "The ID of the script this earning is linked to." },
+        "status": { "type": "string", "enum": ["Available", "Withdrawn"], "description": "Current status of the earning." },
+        "ownerId": { "type": "string", "description": "The UID of the user who owns this earning." }
+      },
+      "required": ["id", "amount", "date", "accountId", "scriptId", "status", "ownerId"]
+    },
+    "Script": {
+      "title": "Script",
+      "description": "Represents a script purchase and its ROI progress.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the script." },
+        "name": { "type": "string", "description": "Name of the script." },
+        "cost": { "type": "number", "description": "The cost of the script." },
+        "earned": { "type": "number", "description": "The total amount earned by this script." },
+        "date": { "type": "string", "format": "date-time", "description": "The date the script was purchased." },
+        "expirationDate": { "type": "string", "format": "date-time", "description": "Optional expiration date for the script." },
+        "ownerId": { "type": "string", "description": "The UID of the user who owns this script." }
+      },
+      "required": ["id", "name", "cost", "earned", "date", "ownerId"]
+    }
+  },
+  "firestore": {
+    "accounts": {
+      "schema": "Account",
+      "description": "Collection of user accounts."
+    },
+    "earnings": {
+      "schema": "Earning",
+      "description": "Collection of earning entries."
+    },
+    "scripts": {
+      "schema": "Script",
+      "description": "Collection of script purchases."
+    }
+  }
+}

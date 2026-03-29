@@ -1,0 +1,161 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: accounts
+    // Document ID: {accountId}
+    // Fields:
+    //   - id: string (required) - Unique identifier for the account.
+    //   - name: string (required) - Name of the account.
+    //   - email: string (optional) - Email associated with the account.
+    //   - phoneNumber: string (optional) - Phone number associated with the account.
+    //   - status: string (required, enum: ["Available", "Restricted"]) - Current status of the account.
+    //   - restrictionEndTime: number (optional) - Timestamp when the restriction ends.
+    //   - balance: number (required) - Current balance of the account.
+    //   - ownerId: string (required) - The UID of the user who owns this account.
+    //
+    // Collection: earnings
+    // Document ID: {earningId}
+    // Fields:
+    //   - id: string (required) - Unique identifier for the earning.
+    //   - amount: number (required) - The amount earned.
+    //   - date: string (required, format: date-time) - The date and time of the earning.
+    //   - accountId: string (required) - The ID of the account this earning belongs to.
+    //   - scriptId: string (required) - The ID of the script this earning is linked to.
+    //   - status: string (required, enum: ["Available", "Withdrawn"]) - Current status of the earning.
+    //   - ownerId: string (required) - The UID of the user who owns this earning.
+    //
+    // Collection: scripts
+    // Document ID: {scriptId}
+    // Fields:
+    //   - id: string (required) - Unique identifier for the script.
+    //   - name: string (required) - Name of the script.
+    //   - cost: number (required) - The cost of the script.
+    //   - earned: number (required) - The total amount earned by this script.
+    //   - date: string (required, format: date-time) - The date the script was purchased.
+    //   - expirationDate: string (optional, format: date-time) - Optional expiration date for the script.
+    //   - ownerId: string (required) - The UID of the user who owns this script.
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.ownerId;
+    }
+
+    function isNewDocOwner() {
+      return isAuthenticated() && request.auth.uid == request.resource.data.ownerId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+          (request.auth.token.email == "xtianxtianxtian26@gmail.com" && request.auth.token.email_verified == true)
+        );
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string &&
+        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string &&
+        dateStr.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.*Z?$");
+    }
+
+    function isValidAccount(data) {
+      return hasRequiredFields(['id', 'name', 'status', 'balance', 'ownerId']) &&
+             hasOnlyAllowedFields(['id', 'name', 'email', 'phoneNumber', 'status', 'restrictionEndTime', 'balance', 'ownerId', 'createdAt']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.status in ['Available', 'Restricted'] &&
+             data.balance is number &&
+             data.ownerId is string &&
+             (!('email' in data) || (data.email == "" || (data.email is string && isValidEmail(data.email)))) &&
+             (!('phoneNumber' in data) || (data.phoneNumber is string && data.phoneNumber.size() < 20)) &&
+             (!('restrictionEndTime' in data) || (data.restrictionEndTime == null || data.restrictionEndTime is number)) &&
+             (!('createdAt' in data) || (data.createdAt is timestamp || data.createdAt == null));
+    }
+
+    function isValidEarning(data) {
+      return hasRequiredFields(['id', 'amount', 'date', 'accountId', 'scriptId', 'status', 'ownerId']) &&
+             hasOnlyAllowedFields(['id', 'amount', 'date', 'accountId', 'scriptId', 'status', 'ownerId', 'createdAt']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.amount is number && data.amount >= 0 &&
+             data.date is string && isValidDateString(data.date) &&
+             data.accountId is string && data.accountId.size() > 0 &&
+             data.scriptId is string && data.scriptId.size() > 0 &&
+             data.status in ['Available', 'Withdrawn'] &&
+             data.ownerId is string &&
+             (!('createdAt' in data) || (data.createdAt is timestamp || data.createdAt == null));
+    }
+
+    function isValidScript(data) {
+      return hasRequiredFields(['id', 'name', 'cost', 'earned', 'date', 'ownerId']) &&
+             hasOnlyAllowedFields(['id', 'name', 'cost', 'earned', 'date', 'expirationDate', 'ownerId', 'createdAt']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.cost is number && data.cost >= 0 &&
+             data.earned is number && data.earned >= 0 &&
+             data.date is string && isValidDateString(data.date) &&
+             data.ownerId is string &&
+             (!('expirationDate' in data) || (data.expirationDate == "" || data.expirationDate == null || (data.expirationDate is string && isValidDateString(data.expirationDate)))) &&
+             (!('createdAt' in data) || (data.createdAt is timestamp || data.createdAt == null));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /accounts/{accountId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isNewDocOwner() && isValidAccount(request.resource.data);
+      allow update: if true;
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /earnings/{earningId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isNewDocOwner() && isValidEarning(request.resource.data);
+      allow update: if true;
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /scripts/{scriptId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isNewDocOwner() && isValidScript(request.resource.data);
+      allow update: if true;
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isAdmin(); // Only admins can manage users
+    }
+  }
+}
