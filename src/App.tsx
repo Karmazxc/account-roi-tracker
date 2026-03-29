@@ -1193,7 +1193,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
   onUpdate
 }) => {
   const [timeLeft, setTimeLeft] = useState<string>('');
-  const [restrictMins, setRestrictMins] = useState<number>(60);
+  const [restrictMins, setRestrictMins] = useState<string>('60:00');
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({ 
     name: account.name, 
@@ -1324,18 +1324,25 @@ const AccountCard: React.FC<AccountCardProps> = ({
       ) : (
         <div className="flex gap-2">
           <div className="flex-1">
-            <input 
-              type="number" 
-              value={restrictMins || ''} 
+            <input
+              type="text"
+              value={restrictMins || ''}
               onChange={(e) => {
-                const val = parseInt(e.target.value);
-                setRestrictMins(isNaN(val) ? 0 : val);
+                setRestrictMins(e.target.value);
               }}
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="Mins"
+              placeholder="e.g. 48:00"
             />
           </div>
-          <Button variant="secondary" className="text-xs py-1 px-3" onClick={() => onRestrict(account.id, restrictMins)}>
+          <Button variant="secondary" className="text-xs py-1 px-3" onClick={() => {
+            const parts = restrictMins.toString().split(':');
+            const hours = parseInt(parts[0] || '0');
+            const mins = parseInt(parts[1] || '0');
+            const totalMins = hours * 60 + mins;
+            if (totalMins > 0) {
+              onRestrict(account.id, totalMins);
+            }
+          }}>
             Restrict
           </Button>
         </div>
